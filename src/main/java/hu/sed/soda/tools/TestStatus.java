@@ -1,7 +1,5 @@
 package hu.sed.soda.tools;
 
-import java.util.List;
-
 import org.junit.runner.notification.RunListener;
 
 /**
@@ -42,18 +40,12 @@ public enum TestStatus {
    * The outcome of the test.
    */
   private final String outcome;
-  /**
-   * The previous status of the test.
-   */
-  private TestStatus previous = null;
 
   /**
    * Constructor.
    * 
-   * @param event
-   *          The name of root cause e.g. "failed".
-   * @param outcome
-   *          The outcome e.g. "FAIL".
+   * @param event The name of root cause e.g. "failed".
+   * @param outcome The outcome e.g. "FAIL".
    */
   private TestStatus(final String event, final String outcome) {
     this.event = event;
@@ -68,31 +60,8 @@ public enum TestStatus {
     return outcome;
   }
 
-  public TestStatus getPrevious() {
-    return previous;
-  }
-
-  public void setPrevious(TestStatus previous) {
-    this.previous = previous;
-  }
-
   @Override
   public String toString() {
     return this.event;
   }
-
-  /**
-   * Retrieves the actual and previous statuses recursively.
-   * 
-   * @param list
-   *          A list which will be populated with the statuses. The latest status will be the last item of this list.
-   */
-  public void getStatusHistory(List<TestStatus> list) {
-    if (previous != null) {
-      previous.getStatusHistory(list);
-    }
-
-    list.add(this);
-  }
-
 }

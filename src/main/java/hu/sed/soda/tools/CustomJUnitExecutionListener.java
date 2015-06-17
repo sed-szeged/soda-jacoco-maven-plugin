@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -41,9 +40,19 @@ public class CustomJUnitExecutionListener extends RunListener {
   private static File outputDirectory;
 
   /**
-   * The results of tests in <test name, status> format with method level granularity.
+   * The results of tests with method level granularity.
    */
-  private static Map<String, TestStatus> testResults = new HashMap<String, TestStatus>();
+  private static List<TestInfo> testResults = new LinkedList<TestInfo>();
+
+  /**
+   * Information about the test which is running at the moment.
+   */
+  private static TestInfo actualTestInfo = null;
+
+  /**
+   * Statistics about the test suite.
+   */
+  private static Map<TestStatus, Long> testStats = new HashMap<TestStatus, Long>();
 
   /**
    * Initializes the output directory and the log output stream.
@@ -56,10 +65,16 @@ public class CustomJUnitExecutionListener extends RunListener {
         outputDirectory.mkdirs();
       }
 
+      // Configuring the logger.
       FileHandler fileHandler = new FileHandler(new File(Constants.BASE_DIR, "CustomJUnitExecutionListener.log").getAbsolutePath());
       fileHandler.setFormatter(new SimpleFormatter());
 
       LOGGER.addHandler(fileHandler);
+
+      // Initializing the statistics.
+      for (TestStatus status : TestStatus.values()) {
+        testStats.put(status, Long.valueOf(0));
+      }
 
       LOGGER.info("Custom run listener has been inizialized successfully.");
     } catch (SecurityException | IOException e) {
@@ -68,59 +83,29 @@ public class CustomJUnitExecutionListener extends RunListener {
   }
 
   /**
-   * Updates the current status of the given test.
-   * 
-   * @param testName
-   *          The name of the test.
-   * @param status
-   *          The new status of the test.
-   */
-  private void updateTestStatus(final String testName, TestStatus status) {
-    TestStatus currentStatus = testResults.get(testName);
-
-    // If there were no other statuses than started and finished then the actual test gets the succeeded status.
-    if (currentStatus == TestStatus.STARTED && status == TestStatus.FINISHED) {
-      status = TestStatus.SUCCEEDED;
-    }
-
-    status.setPrevious(currentStatus);
-
-    testResults.put(testName, status);
-  }
-
-  /**
    * Creates a name for the given test and updates the status of that test.
    * 
-   * @param description
-   *          The {@link Description description} of the test.
-   * @param status
-   *          The {@link TestStatus status} of the test.
+   * @param description The {@link Description description} of the test.
+   * @param status The {@link TestStatus status} of the test.
    */
   private void handleEvent(Description description, TestStatus status) {
-    String name = getTestName(description);
+    testStats.put(status, testStats.get(status).longValue() + 1);
 
-    updateTestStatus(name, status);
+    actualTestInfo.addStatus(status);
 
-    LOGGER.info(String.format("%s %s %s", description.getDisplayName(), getTestName(description), status));
+    LOGGER.info(String.format("%s %s %s", description.getDisplayName(), actualTestInfo.getFullTestName(), status));
   }
 
   /**
-   * Creates the name of a test based on its description and the given arbitrary components.
+   * Creates the name of a test based on its description.
    * 
-   * @param description
-   *          The {@link Description description} of the test.
-   * @param otherComponents
-   *          Any arbitrary string components which will be concatenated and used as a suffix.
-   * @return
+   * @param description The {@link Description description} of the test.
+   * @return The name of the test.
    */
-  private String getTestName(Description description, String... otherComponents) {
+  private String getTestName(Description description) {
     StringBuilder sb = new StringBuilder();
 
     sb.append(description.getClassName()).append('.').append(description.getMethodName());
-
-    for (String component : otherComponents) {
-      sb.append('.').append(component);
-    }
 
     return sb.toString().replaceAll("[^a-zA-Z0-9\\-\\._]+", "-");
   }
@@ -141,17 +126,8 @@ public class CustomJUnitExecutionListener extends RunListener {
     File resultsFile = new File(resultsDir, String.format("TestResults.r%d", revisionNumber));
 
     try (BufferedWriter output = new BufferedWriter(new FileWriter(resultsFile))) {
-      for (Entry<String, TestStatus> result : testResults.entrySet()) {
-        String outcome = result.getValue().getOutcome();
-
-        List<TestStatus> statuses = new LinkedList<TestStatus>();
-        result.getValue().getStatusHistory(statuses);
-
-        if (statuses.contains(TestStatus.ASSUMPTION_FAILED)) {
-          outcome = TestStatus.ASSUMPTION_FAILED.getOutcome();
-        }
-
-        output.write(String.format("%s: %s\n", outcome, result.getKey()));
+      for (TestInfo result : testResults) {
+        output.write(String.format("%s: %s\n", result.getFinalStatus().getOutcome(), result.getFullTestName()));
       }
     }
   }
@@ -163,13 +139,19 @@ public class CustomJUnitExecutionListener extends RunListener {
 
   @Override
   public void testIgnored(Description description) throws Exception {
+    actualTestInfo = new TestInfo(getTestName(description));
+
     handleEvent(description, TestStatus.IGNORED);
+
+    testResults.add(actualTestInfo);
 
     super.testIgnored(description);
   }
 
   @Override
   public void testStarted(Description description) throws Exception {
+    actualTestInfo = new TestInfo(getTestName(description));
+
     handleEvent(description, TestStatus.STARTED);
 
     super.testStarted(description);
@@ -193,7 +175,9 @@ public class CustomJUnitExecutionListener extends RunListener {
   public void testFinished(Description description) throws Exception {
     handleEvent(description, TestStatus.FINISHED);
 
-    File coverageFile = new File(outputDirectory, getTestName(description, Constants.COVERAGE_FILE_EXT));
+    testResults.add(actualTestInfo);
+
+    File coverageFile = new File(outputDirectory, actualTestInfo.getFullTestName() + '.' + Constants.COVERAGE_FILE_EXT);
     coverageFile.mkdirs();
 
     /*
@@ -201,7 +185,7 @@ public class CustomJUnitExecutionListener extends RunListener {
      * See more at http://sourceforge.net/p/emma/news/2005/06/emma-early-access-build-215320-available-new-ctl-tool/
      */
     List<ControlRequest> requests = new LinkedList<ControlRequest>();
-    requests.add(ControlRequest.create(ControlRequest.COMMAND_DUMP_COVERAGE, new String[] { coverageFile.getAbsolutePath(), "false", "false" }));
+    requests.add(ControlRequest.create(ControlRequest.COMMAND_DUMP_COVERAGE, new String[] {coverageFile.getAbsolutePath(), "false", "false"}));
     requests.add(ControlRequest.create(ControlRequest.COMMAND_RESET_COVERAGE, null));
 
     CtlProcessor processor = CtlProcessor.create();
@@ -213,16 +197,9 @@ public class CustomJUnitExecutionListener extends RunListener {
 
   @Override
   public void testRunFinished(Result result) throws Exception {
-    LOGGER.info(String.format("TEST RUN FINISHED in %dms (tests=%d ignored=%d failed=%d)", result.getRunTime(), result.getRunCount(), result.getIgnoreCount(), result.getFailureCount()));
-
-    /*
-     * Workaround to handles the test that have failed.
-     * 
-     * @TODO: Find out why the testFailure(Failure) method is not called during the execution of the test suite.
-     */
-    for (Failure failure : result.getFailures()) {
-      handleEvent(failure.getDescription(), TestStatus.FAILED);
-    }
+    LOGGER.info(String.format("TEST RUN FINISHED in %dms", result.getRunTime()));
+    LOGGER.info(String.format("JUnit stats: {tests=%d, ignored=%d, failed=%d}", result.getRunCount(), result.getIgnoreCount(), result.getFailureCount()));
+    LOGGER.info(String.format("Listener stats: %s", testStats));
 
     dumpTestResults();
 
