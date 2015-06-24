@@ -43,13 +43,17 @@ public class ReportGeneratorMojo extends AbstractMojo {
     getLog().debug("in = " + inputDirectory.getAbsolutePath());
     getLog().debug("out = " + outputDirectory.getAbsolutePath());
 
-    String[] coverageFilePaths = getCoverageFilePaths(inputDirectory);
+    try {
+      String[] coverageFilePaths = getCoverageFilePaths(inputDirectory);
 
-    getLog().debug("files = " + coverageFilePaths.length);
+      getLog().debug("files = " + coverageFilePaths.length);
 
-    generateReports(coverageFilePaths);
+      generateReports(coverageFilePaths);
 
-    getLog().info("Reports were generated successfully.");
+      getLog().info("Reports were generated successfully.");
+    } catch (IllegalStateException e) {
+      getLog().warn("Skipping report generation because: " + e.getMessage());
+    }
   }
 
   /**

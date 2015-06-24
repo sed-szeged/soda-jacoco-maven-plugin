@@ -76,7 +76,7 @@ public class CustomJUnitExecutionListener extends RunListener {
         testStats.put(status, Long.valueOf(0));
       }
 
-      LOGGER.info("Custom run listener has been inizialized successfully.");
+      LOGGER.info("Custom run listener has been initialized successfully.");
     } catch (SecurityException | IOException e) {
       System.err.println(e);
     }
