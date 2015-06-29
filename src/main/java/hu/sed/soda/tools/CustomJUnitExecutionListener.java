@@ -180,7 +180,7 @@ public class CustomJUnitExecutionListener extends RunListener {
 
     testResults.add(actualTestInfo);
     File coverageFile = new File(outputDirectory, actualTestInfo.getFullTestName() + '.' + Constants.COVERAGE_FILE_EXT);
-    coverageFile.mkdirs();
+    outputDirectory.mkdirs();
 
     final FileOutputStream localFile = new FileOutputStream(coverageFile);
 
