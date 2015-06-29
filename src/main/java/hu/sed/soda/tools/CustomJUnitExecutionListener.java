@@ -1,9 +1,8 @@
 package hu.sed.soda.tools;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.net.InetAddress;
+import java.net.Socket;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -13,13 +12,13 @@ import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
+import org.jacoco.core.data.ExecutionDataWriter;
+import org.jacoco.core.runtime.RemoteControlReader;
+import org.jacoco.core.runtime.RemoteControlWriter;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
-
-import com.vladium.emma.ctl.ControlRequest;
-import com.vladium.emma.ctl.CtlProcessor;
 
 /**
  * Custom execution listener for JUnit 4.x and later.
@@ -27,6 +26,10 @@ import com.vladium.emma.ctl.CtlProcessor;
 public class CustomJUnitExecutionListener extends RunListener {
 
   private static final Logger LOGGER = Logger.getLogger(CustomJUnitExecutionListener.class.getName());
+
+  private static final String ADDRESS = "localhost";
+
+  private static final int PORT = 9999;
 
   /**
    * The version number of the program under test.
@@ -194,19 +197,24 @@ public class CustomJUnitExecutionListener extends RunListener {
     handleEvent(description, TestStatus.FINISHED);
 
     File coverageFile = new File(outputDirectory, getTestName(description, Constants.COVERAGE_FILE_EXT));
-    coverageFile.mkdirs();
+      outputDirectory.mkdirs();
 
-    /*
-     * This code manages the coverage data by calling the ctl tool of EMMA.
-     * See more at http://sourceforge.net/p/emma/news/2005/06/emma-early-access-build-215320-available-new-ctl-tool/
-     */
-    List<ControlRequest> requests = new LinkedList<ControlRequest>();
-    requests.add(ControlRequest.create(ControlRequest.COMMAND_DUMP_COVERAGE, new String[] { coverageFile.getAbsolutePath(), "false", "false" }));
-    requests.add(ControlRequest.create(ControlRequest.COMMAND_RESET_COVERAGE, null));
+    final FileOutputStream localFile = new FileOutputStream(coverageFile);
 
-    CtlProcessor processor = CtlProcessor.create();
-    processor.setCommandSequence(requests.toArray(new ControlRequest[] {}));
-    processor.run();
+    final ExecutionDataWriter localWriter = new ExecutionDataWriter(localFile);
+
+    final Socket socket = new Socket(InetAddress.getByName(ADDRESS), PORT);
+    final RemoteControlWriter writer = new RemoteControlWriter(socket.getOutputStream());
+    final RemoteControlReader reader = new RemoteControlReader(socket.getInputStream());
+    reader.setSessionInfoVisitor(localWriter);
+    reader.setExecutionDataVisitor(localWriter);
+
+    // Send a dump command and read the response:
+    writer.visitDumpCommand(true, true);
+    reader.read();
+
+    socket.close();
+    localFile.close();
 
     super.testFinished(description);
   }

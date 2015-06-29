@@ -8,12 +8,12 @@ public interface Constants {
   /**
    * The extension of coverage files produced by EMMA.
    */
-  static final String COVERAGE_FILE_EXT = "ec";
+  static final String COVERAGE_FILE_EXT = "exec";
 
   /**
    * The default directory.
    */
-  static final String BASE_DIR = "target/emma";
+  static final String BASE_DIR = "target/jacoco";
 
   /**
    * The directory for coverage data.
