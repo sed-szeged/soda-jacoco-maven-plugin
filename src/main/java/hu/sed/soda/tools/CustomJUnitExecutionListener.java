@@ -17,9 +17,6 @@ import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
 
-import com.vladium.emma.ctl.ControlRequest;
-import com.vladium.emma.ctl.CtlProcessor;
-
 /**
  * Custom execution listener for JUnit 4.x and later.
  */
@@ -85,8 +82,10 @@ public class CustomJUnitExecutionListener extends RunListener {
   /**
    * Creates a name for the given test and updates the status of that test.
    * 
-   * @param description The {@link Description description} of the test.
-   * @param status The {@link TestStatus status} of the test.
+   * @param description
+   *          The {@link Description description} of the test.
+   * @param status
+   *          The {@link TestStatus status} of the test.
    */
   private void handleEvent(Description description, TestStatus status) {
     testStats.put(status, testStats.get(status).longValue() + 1);
@@ -94,20 +93,6 @@ public class CustomJUnitExecutionListener extends RunListener {
     actualTestInfo.addStatus(status);
 
     LOGGER.info(String.format("%s %s %s", description.getDisplayName(), actualTestInfo.getFullTestName(), status));
-  }
-
-  /**
-   * Creates the name of a test based on its description.
-   * 
-   * @param description The {@link Description description} of the test.
-   * @return The name of the test.
-   */
-  private String getTestName(Description description) {
-    StringBuilder sb = new StringBuilder();
-
-    sb.append(description.getClassName()).append('.').append(description.getMethodName());
-
-    return sb.toString().replaceAll("[^a-zA-Z0-9\\-\\._]+", "-");
   }
 
   /**
@@ -139,7 +124,7 @@ public class CustomJUnitExecutionListener extends RunListener {
 
   @Override
   public void testIgnored(Description description) throws Exception {
-    actualTestInfo = new TestInfo(getTestName(description));
+    actualTestInfo = new TestInfo(Utils.getTestName(description));
 
     handleEvent(description, TestStatus.IGNORED);
 
@@ -150,7 +135,7 @@ public class CustomJUnitExecutionListener extends RunListener {
 
   @Override
   public void testStarted(Description description) throws Exception {
-    actualTestInfo = new TestInfo(getTestName(description));
+    actualTestInfo = new TestInfo(Utils.getTestName(description));
 
     handleEvent(description, TestStatus.STARTED);
 
@@ -178,19 +163,7 @@ public class CustomJUnitExecutionListener extends RunListener {
     testResults.add(actualTestInfo);
 
     File coverageFile = new File(outputDirectory, actualTestInfo.getFullTestName() + '.' + Constants.COVERAGE_FILE_EXT);
-    coverageFile.mkdirs();
-
-    /*
-     * This code manages the coverage data by calling the ctl tool of EMMA.
-     * See more at http://sourceforge.net/p/emma/news/2005/06/emma-early-access-build-215320-available-new-ctl-tool/
-     */
-    List<ControlRequest> requests = new LinkedList<ControlRequest>();
-    requests.add(ControlRequest.create(ControlRequest.COMMAND_DUMP_COVERAGE, new String[] {coverageFile.getAbsolutePath(), "false", "false"}));
-    requests.add(ControlRequest.create(ControlRequest.COMMAND_RESET_COVERAGE, null));
-
-    CtlProcessor processor = CtlProcessor.create();
-    processor.setCommandSequence(requests.toArray(new ControlRequest[] {}));
-    processor.run();
+    Utils.dumpAndResetCoverage(coverageFile);
 
     super.testFinished(description);
   }

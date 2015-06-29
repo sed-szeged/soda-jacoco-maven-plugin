@@ -44,7 +44,7 @@ public class TestInfo {
   }
 
   /**
-   * Calculates the final status of a test based on the list of statuses that occured during the execution of the test.
+   * Calculates the final status of a test based on the list of statuses that occurred during the execution of the test.
    * 
    * @return The final status.
    */
