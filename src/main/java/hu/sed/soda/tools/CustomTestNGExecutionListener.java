@@ -84,7 +84,7 @@ public class CustomTestNGExecutionListener implements ITestListener {
     if (status != TestNGStatus.STARTED) {
       String fullTestName = String.format("%s.%s", testName, testIndex++);
 
-      File coverageFile = new File(Constants.BASE_DIR, fullTestName + '.' + Constants.COVERAGE_FILE_EXT);
+      File coverageFile = new File(outputDirectory, fullTestName + '.' + Constants.COVERAGE_FILE_EXT);
       Utils.dumpAndResetCoverage(coverageFile);
 
       testResults.put(fullTestName, status);
