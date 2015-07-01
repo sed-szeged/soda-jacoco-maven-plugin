@@ -7,7 +7,6 @@ import java.io.IOException;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.plexus.util.DirectoryScanner;
@@ -17,14 +16,13 @@ import org.jacoco.core.analysis.IBundleCoverage;
 import org.jacoco.core.tools.ExecFileLoader;
 import org.jacoco.report.DirectorySourceFileLocator;
 import org.jacoco.report.IReportVisitor;
-import org.jacoco.report.html.HTMLFormatter;
 import org.jacoco.report.xml.XMLFormatter;
 
 
 /**
- * This class handles the coverage report generation process which produces the separate XML coverage files for the different tests.
+ * Handles the coverage report generation process which produces the separate XML coverage files for the different tests.
  */
-@Mojo(name = "report", defaultPhase = LifecyclePhase.TEST)
+@Mojo(name = "report")
 public class ReportGeneratorMojo extends AbstractMojo {
 
   @Parameter(defaultValue = "${project.build.directory}/jacoco")
@@ -44,7 +42,7 @@ public class ReportGeneratorMojo extends AbstractMojo {
 
   @Override
   public void execute() throws MojoExecutionException, MojoFailureException {
-    getLog().info("Executing JRunner Maven Plugin ...");
+    getLog().info("Executing SoDA Maven Plugin ...");
 
     getLog().debug("base = " + baseDirectory.getAbsolutePath());
     getLog().debug("in = " + inputDirectory.getAbsolutePath());
@@ -94,24 +92,35 @@ public class ReportGeneratorMojo extends AbstractMojo {
 
     for (String path : coverageFilePaths) {
       String testName = path.replaceAll(String.format("\\.%s", Constants.COVERAGE_FILE_EXT), "");
+
       File outputFile = new File(outputDirectory, testName + ".xml");
+
       try {
         ExecFileLoader loader = loadExecutionData(new File(inputDirectory, path));
-        // Run the structure analyzer on a single class folder to build up
-        // the coverage model. The process would be similar if your classes
-        // were in a jar file. Typically you would create a bundle for each
-        // class folder and each jar you want in your report. If you have
-        // more than one bundle you will need to add a grouping node to your
-        // report
-        final IBundleCoverage bundleCoverage = analyzeStructure(loader, testName);
-        createReport(loader, bundleCoverage, outputFile);
 
+        // Run the structure analyzer on a single class folder to build up the coverage model.
+        // The process would be similar if your classes were in a jar file.
+        // Typically you would create a bundle for each class folder and each jar you want in your report.
+        // If you have more than one bundle you will need to add a grouping node to your report.
+        final IBundleCoverage bundleCoverage = analyzeStructure(loader, testName);
+
+        createReport(loader, bundleCoverage, outputFile);
       } catch (IOException e) {
         e.printStackTrace();
       }
     }
   }
 
+  /**
+   * Loads coverage data from a given file.
+   * 
+   * @param executionDataFile
+   *          An arbitrary .exec file.
+   * 
+   * @return An {@link ExecFileLoader} that holds the coverage data.
+   * 
+   * @throws IOException
+   */
   private ExecFileLoader loadExecutionData(File executionDataFile) throws IOException {
     ExecFileLoader execFileLoader = new ExecFileLoader();
     execFileLoader.load(executionDataFile);
@@ -119,6 +128,18 @@ public class ReportGeneratorMojo extends AbstractMojo {
     return execFileLoader;
   }
 
+  /**
+   * Creates a coverage bundle by analyzing the given {@link ExecFileLoader}.
+   * 
+   * @param execFileLoader
+   *          An arbitrary {@link ExecFileLoader} that holds the coverage data.
+   * @param testName
+   *          The name of a test which will be used as the bundle name.
+   * 
+   * @return A coverage {@link IBundleCoverage bundle}.
+   * 
+   * @throws IOException
+   */
   private IBundleCoverage analyzeStructure(ExecFileLoader execFileLoader, String testName) throws IOException {
     final CoverageBuilder coverageBuilder = new CoverageBuilder();
     final Analyzer analyzer = new Analyzer(execFileLoader.getExecutionDataStore(), coverageBuilder);
@@ -128,25 +149,31 @@ public class ReportGeneratorMojo extends AbstractMojo {
     return coverageBuilder.getBundle(testName);
   }
 
+  /**
+   * Creates report files based on the given coverage information.
+   * 
+   * @param execFileLoader
+   *          An arbitrary {@link ExecFileLoader} that holds the coverage data.
+   * @param bundleCoverage
+   *          A coverage {@link IBundleCoverage bundle}.
+   * @param outputFile
+   *          The file in which the report will be saved.
+   * 
+   * @throws IOException
+   */
   private void createReport(ExecFileLoader execFileLoader, final IBundleCoverage bundleCoverage, File outputFile) throws IOException {
-
-    // Create a concrete report visitor based on some supplied
-    // configuration. In this case we use the defaults
+    // Create a concrete report visitor based on some supplied configuration. In this case we use the defaults
     final XMLFormatter xmlFormatter = new XMLFormatter();
     final FileOutputStream out = new FileOutputStream(outputFile);
     final IReportVisitor visitor = xmlFormatter.createVisitor(out);
-    final HTMLFormatter htmlFormatter = new HTMLFormatter();
 
-    visitor.visitInfo(execFileLoader.getSessionInfoStore().getInfos(),
-    execFileLoader.getExecutionDataStore().getContents());
+    visitor.visitInfo(execFileLoader.getSessionInfoStore().getInfos(), execFileLoader.getExecutionDataStore().getContents());
 
     // Populate the report structure with the bundle coverage information.
     // Call visitGroup if you need groups in your report.
-    visitor.visitBundle(bundleCoverage, new DirectorySourceFileLocator(sourceDirectory, "utf-8", 4));
+    visitor.visitBundle(bundleCoverage, new DirectorySourceFileLocator(sourceDirectory, "UTF-8", 4));
 
-    // Signal end of structure information to allow report to write all
-    // information out
+    // Signal end of structure information to allow report to write all information out
     visitor.visitEnd();
-
   }
 }

@@ -26,10 +26,6 @@ public class CustomJUnitExecutionListener extends RunListener {
 
   private static final Logger LOGGER = Logger.getLogger(CustomJUnitExecutionListener.class.getName());
 
-  private static final String ADDRESS = "localhost";
-
-  private static final int PORT = 9999;
-
   /**
    * The version number of the program under test.
    * 
@@ -186,7 +182,7 @@ public class CustomJUnitExecutionListener extends RunListener {
 
     final ExecutionDataWriter localWriter = new ExecutionDataWriter(localFile);
 
-    final Socket socket = new Socket(InetAddress.getByName(ADDRESS), PORT);
+    final Socket socket = new Socket(InetAddress.getByName(Constants.JACOCO_AGENT_ADDRESS), Constants.JACOCO_AGENT_PORT);
     final RemoteControlWriter writer = new RemoteControlWriter(socket.getOutputStream());
     final RemoteControlReader reader = new RemoteControlReader(socket.getInputStream());
     reader.setSessionInfoVisitor(localWriter);
