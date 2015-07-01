@@ -161,8 +161,9 @@ public class CustomJUnitExecutionListener extends RunListener {
     handleEvent(description, TestStatus.FINISHED);
 
     testResults.add(actualTestInfo);
-
     File coverageFile = new File(outputDirectory, actualTestInfo.getFullTestName() + '.' + Constants.COVERAGE_FILE_EXT);
+    outputDirectory.mkdirs();
+
     Utils.dumpAndResetCoverage(coverageFile);
 
     super.testFinished(description);

@@ -1,16 +1,17 @@
 package hu.sed.soda.tools;
 
 import java.io.File;
-import java.util.LinkedList;
-import java.util.List;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.Socket;
 import java.util.logging.Logger;
 
+import org.jacoco.core.data.ExecutionDataWriter;
+import org.jacoco.core.runtime.RemoteControlReader;
+import org.jacoco.core.runtime.RemoteControlWriter;
 import org.junit.runner.Description;
 import org.testng.ITestResult;
-
-import com.vladium.emma.EMMARuntimeException;
-import com.vladium.emma.ctl.ControlRequest;
-import com.vladium.emma.ctl.CtlProcessor;
 
 /**
  * This class contains commonly used methods.
@@ -69,17 +70,23 @@ public class Utils {
    */
   public static void dumpAndResetCoverage(File coverageFile) {
     try {
-      /*
-       * This code manages the coverage data by calling the ctl tool of EMMA. See more at http://sourceforge.net/p/emma/news/2005/06/emma-early-access-build-215320-available-new-ctl-tool/
-       */
-      List<ControlRequest> requests = new LinkedList<ControlRequest>();
-      requests.add(ControlRequest.create(ControlRequest.COMMAND_DUMP_COVERAGE, new String[] { coverageFile.getAbsolutePath(), "false", "false" }));
-      requests.add(ControlRequest.create(ControlRequest.COMMAND_RESET_COVERAGE, null));
+      final FileOutputStream localFile = new FileOutputStream(coverageFile);
 
-      CtlProcessor processor = CtlProcessor.create();
-      processor.setCommandSequence(requests.toArray(new ControlRequest[] {}));
-      processor.run();
-    } catch (EMMARuntimeException e) {
+      final ExecutionDataWriter localWriter = new ExecutionDataWriter(localFile);
+
+      final Socket socket = new Socket(InetAddress.getByName(Constants.JACOCO_AGENT_ADDRESS), Constants.JACOCO_AGENT_PORT);
+      final RemoteControlWriter writer = new RemoteControlWriter(socket.getOutputStream());
+      final RemoteControlReader reader = new RemoteControlReader(socket.getInputStream());
+      reader.setSessionInfoVisitor(localWriter);
+      reader.setExecutionDataVisitor(localWriter);
+
+      // Send a dump command and read the response:
+      writer.visitDumpCommand(true, true);
+      reader.read();
+
+      socket.close();
+      localFile.close();
+    } catch (IOException e) {
       LOGGER.warning("Cannot dump and reset coverage because: " + e.getMessage());
     }
   }
