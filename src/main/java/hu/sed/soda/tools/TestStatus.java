@@ -1,67 +1,18 @@
 package hu.sed.soda.tools;
 
-import org.junit.runner.notification.RunListener;
-
 /**
- * An enumeration for storing test test statuses.
+ * Common interface for JUnit and TestNG test statuses.
  */
-public enum TestStatus {
+public interface TestStatus {
 
   /**
-   * Indicates that {@link RunListener#testRunStarted(org.junit.runner.Description)} was called.
+   * @return The name of the event which caused the actual status.
    */
-  STARTED("started", "STRT"),
-  /**
-   * Indicates that {@link RunListener#testIgnored(org.junit.runner.Description)} was called.
-   */
-  IGNORED("ignored", "IGNR"),
-  /**
-   * Indicates that {@link RunListener#testFailure(org.junit.runner.notification.Failure)} was called.
-   */
-  FAILED("failed", "FAIL"),
-  /**
-   * Indicates that {@link RunListener#testAssumptionFailure(org.junit.runner.notification.Failure)} was called.
-   */
-  ASSUMPTION_FAILED("assumption failed", "AFAIL"),
-  /**
-   * Indicates that {@link RunListener#testFinished(org.junit.runner.Description)} was called.
-   */
-  FINISHED("finished", "FNSH"),
-  /**
-   * Indicates that the test finished successfully i.e. there were no other statuses than {@link #STARTED} and {@link #FINISHED}.
-   */
-  SUCCEEDED("succeeded", "PASS");
+  public String getEvent();
 
   /**
-   * The name of the root cause event.
+   * @return The outcome of the test.
    */
-  private final String event;
-  /**
-   * The outcome of the test.
-   */
-  private final String outcome;
+  public String getOutcome();
 
-  /**
-   * Constructor.
-   * 
-   * @param event The name of root cause e.g. "failed".
-   * @param outcome The outcome e.g. "FAIL".
-   */
-  private TestStatus(final String event, final String outcome) {
-    this.event = event;
-    this.outcome = outcome;
-  }
-
-  public String getEvent() {
-    return event;
-  }
-
-  public String getOutcome() {
-    return outcome;
-  }
-
-  @Override
-  public String toString() {
-    return this.event;
-  }
 }

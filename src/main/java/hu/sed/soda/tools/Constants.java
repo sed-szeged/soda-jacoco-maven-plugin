@@ -30,4 +30,13 @@ public interface Constants {
    */
   static final Path COVERAGE_DIR = Paths.get(BASE_DIR, "coverage", "raw");
 
+  /**
+   * The name of the file which stores the hash to test name mapping.
+   */
+  static final String MAP_FILE = "HashToTest";
+
+  /**
+   * Separator string for hash to test name map file.
+   */
+  static final String MAP_FILE_SEPARATOR = "\t";
 }

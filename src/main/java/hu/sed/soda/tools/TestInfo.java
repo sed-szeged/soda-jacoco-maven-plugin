@@ -3,20 +3,12 @@ package hu.sed.soda.tools;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.commons.codec.digest.DigestUtils;
+
 /**
  * Stores information about a test.
  */
 public class TestInfo {
-
-  /**
-   * This index is used for avoiding test name collisions.
-   */
-  private static long globalIndex = 0;
-
-  /**
-   * The index of the test.
-   */
-  private long index;
 
   /**
    * The name of the test.
@@ -29,18 +21,50 @@ public class TestInfo {
   List<TestStatus> statuses;
 
   /**
+   * Whether the status of the test is concrete or it should be calculated.
+   */
+  private boolean isConcrete;
+
+  /**
    * Creates a test information object.
    * 
-   * @param testName The name of the test.
+   * @param testName
+   *          The name of the test.
    */
   public TestInfo(String testName) {
-    this.index = globalIndex++;
     this.testName = testName;
     this.statuses = new LinkedList<TestStatus>();
+    this.isConcrete = false;
+  }
+
+  /**
+   * Creates a test information object with an initial status.
+   * 
+   * @param testName
+   *          The name of the test.
+   * @param status
+   *          The status of the test.
+   */
+  public TestInfo(String testName, TestStatus status) {
+    this(testName);
+
+    this.statuses.add(status);
+    this.isConcrete = true;
+  }
+
+  public String getTestName() {
+    return testName;
   }
 
   public List<TestStatus> getStatuses() {
     return statuses;
+  }
+
+  /**
+   * @return The hash of the test info.
+   */
+  public String getHash() {
+    return DigestUtils.md5Hex(testName);
   }
 
   /**
@@ -49,34 +73,32 @@ public class TestInfo {
    * @return The final status.
    */
   public TestStatus getFinalStatus() {
-    TestStatus status = TestStatus.SUCCEEDED;
+    TestStatus status = null;
 
-    if (statuses.contains(TestStatus.IGNORED)) {
-      status = TestStatus.IGNORED;
-    } else if (statuses.contains(TestStatus.ASSUMPTION_FAILED)) {
-      status = TestStatus.ASSUMPTION_FAILED;
-    } else if (statuses.contains(TestStatus.FAILED)) {
-      status = TestStatus.FAILED;
+    if (isConcrete) {
+      status = statuses.get(0);
+    } else {
+      status = JUnitStatus.SUCCEEDED;
+
+      if (statuses.contains(JUnitStatus.IGNORED)) {
+        status = JUnitStatus.IGNORED;
+      } else if (statuses.contains(JUnitStatus.ASSUMPTION_FAILED)) {
+        status = JUnitStatus.ASSUMPTION_FAILED;
+      } else if (statuses.contains(JUnitStatus.FAILED)) {
+        status = JUnitStatus.FAILED;
+      }
     }
 
     return status;
   }
 
   /**
-   * Creates a name for the actual test.
-   * 
-   * @return The name of the test concatenated with the index of the test.
-   */
-  public String getFullTestName() {
-    return testName + '.' + index;
-  }
-
-  /**
    * Adds a status to the list of statuses.
    * 
-   * @param status An arbitrary test status.
+   * @param status
+   *          An arbitrary test status.
    */
-  public void addStatus(TestStatus status) {
+  public void addStatus(JUnitStatus status) {
     statuses.add(status);
   }
 

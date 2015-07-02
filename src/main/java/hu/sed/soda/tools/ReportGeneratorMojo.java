@@ -1,8 +1,16 @@
 package hu.sed.soda.tools;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -17,7 +25,6 @@ import org.jacoco.core.tools.ExecFileLoader;
 import org.jacoco.report.DirectorySourceFileLocator;
 import org.jacoco.report.IReportVisitor;
 import org.jacoco.report.xml.XMLFormatter;
-
 
 /**
  * Handles the coverage report generation process which produces the separate XML coverage files for the different tests.
@@ -39,6 +46,17 @@ public class ReportGeneratorMojo extends AbstractMojo {
 
   @Parameter(defaultValue = "${project.build.sourceDirectory}")
   private File sourceDirectory;
+  
+  /**
+   * The revision identifier of the actual program under test.
+   */
+  @Parameter(defaultValue = "0")
+  private String revision;
+
+  /**
+   * Associates the hash of the name and the full name of a test together.
+   */
+  private Map<String, String> hashToTestMap = new HashMap<String, String>();
 
   @Override
   public void execute() throws MojoExecutionException, MojoFailureException {
@@ -51,6 +69,8 @@ public class ReportGeneratorMojo extends AbstractMojo {
     getLog().debug("source = " + sourceDirectory.getAbsolutePath());
 
     try {
+      outputDirectory.mkdirs();
+
       String[] coverageFilePaths = getCoverageFilePaths(inputDirectory);
 
       getLog().debug("files = " + coverageFilePaths.length);
@@ -58,8 +78,12 @@ public class ReportGeneratorMojo extends AbstractMojo {
       generateReports(coverageFilePaths);
 
       getLog().info("Reports were generated successfully.");
-    } catch (IllegalStateException e) {
-      getLog().warn("Skipping report generation because: " + e.getMessage());
+    } catch (IllegalStateException | IOException e) {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+      e.printStackTrace(new PrintStream(baos));
+
+      getLog().warn("Skipping report generation because: " + baos.toString());
     }
   }
 
@@ -86,28 +110,25 @@ public class ReportGeneratorMojo extends AbstractMojo {
    * 
    * @param coverageFilePaths
    *          The coverage data files.
+   * 
+   * @throws IOException
+   * @throws FileNotFoundException
    */
-  private void generateReports(String[] coverageFilePaths) {
-    outputDirectory.mkdirs();
+  private void generateReports(String[] coverageFilePaths) throws FileNotFoundException, IOException {
+    createHashToTestMapping();
 
     for (String path : coverageFilePaths) {
-      String testName = path.replaceAll(String.format("\\.%s", Constants.COVERAGE_FILE_EXT), "");
+      String nameHash = path.replaceAll(String.format("\\.%s", Constants.COVERAGE_FILE_EXT), "");
 
-      File outputFile = new File(outputDirectory, testName + ".xml");
+      ExecFileLoader loader = loadExecutionData(new File(inputDirectory, path));
 
-      try {
-        ExecFileLoader loader = loadExecutionData(new File(inputDirectory, path));
+      // Run the structure analyzer on a single class folder to build up the coverage model.
+      // The process would be similar if your classes were in a jar file.
+      // Typically you would create a bundle for each class folder and each jar you want in your report.
+      // If you have more than one bundle you will need to add a grouping node to your report.
+      final IBundleCoverage bundleCoverage = analyzeStructure(loader, nameHash);
 
-        // Run the structure analyzer on a single class folder to build up the coverage model.
-        // The process would be similar if your classes were in a jar file.
-        // Typically you would create a bundle for each class folder and each jar you want in your report.
-        // If you have more than one bundle you will need to add a grouping node to your report.
-        final IBundleCoverage bundleCoverage = analyzeStructure(loader, testName);
-
-        createReport(loader, bundleCoverage, outputFile);
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
+      createReport(loader, bundleCoverage, nameHash);
     }
   }
 
@@ -156,17 +177,20 @@ public class ReportGeneratorMojo extends AbstractMojo {
    *          An arbitrary {@link ExecFileLoader} that holds the coverage data.
    * @param bundleCoverage
    *          A coverage {@link IBundleCoverage bundle}.
-   * @param outputFile
-   *          The file in which the report will be saved.
+   * @param testNameHash
+   *          The hash of the name of a test.
    * 
    * @throws IOException
    */
-  private void createReport(ExecFileLoader execFileLoader, final IBundleCoverage bundleCoverage, File outputFile) throws IOException {
+  private void createReport(ExecFileLoader execFileLoader, final IBundleCoverage bundleCoverage, String testNameHash) throws IOException {
+    final File outputFile = new File(outputDirectory, testNameHash + ".xml");
+    FileOutputStream out = new FileOutputStream(outputFile);
+
     // Create a concrete report visitor based on some supplied configuration. In this case we use the defaults
     final XMLFormatter xmlFormatter = new XMLFormatter();
-    final FileOutputStream out = new FileOutputStream(outputFile);
-    final IReportVisitor visitor = xmlFormatter.createVisitor(out);
+    xmlFormatter.setOutputEncoding("UTF-8");
 
+    final IReportVisitor visitor = xmlFormatter.createVisitor(out);
     visitor.visitInfo(execFileLoader.getSessionInfoStore().getInfos(), execFileLoader.getExecutionDataStore().getContents());
 
     // Populate the report structure with the bundle coverage information.
@@ -175,5 +199,32 @@ public class ReportGeneratorMojo extends AbstractMojo {
 
     // Signal end of structure information to allow report to write all information out
     visitor.visitEnd();
+
+    // Appending the full name of the actual test to the end of the output file.
+    out = new FileOutputStream(outputFile, true);
+
+    out.write(String.format("<!-- %s -->", hashToTestMap.get(testNameHash)).getBytes());
+    out.close();
   }
+
+  /**
+   * Reads the map file which is placed beside the .exec files and initializes the mapping which associates the full test names with their hashes.
+   * 
+   * @throws IOException
+   * @throws FileNotFoundException
+   */
+  public void createHashToTestMapping() throws IOException, FileNotFoundException {
+    File mapFile = Paths.get(Constants.BASE_DIR, revision, String.format("%s.r%s", Constants.MAP_FILE, revision)).toFile();
+
+    try (BufferedReader input = new BufferedReader(new FileReader(mapFile))) {
+      String line = null;
+
+      while ((line = input.readLine()) != null) {
+        String[] tokens = line.split(Constants.MAP_FILE_SEPARATOR);
+
+        hashToTestMap.put(tokens[0], tokens[1]);
+      }
+    }
+  }
+
 }

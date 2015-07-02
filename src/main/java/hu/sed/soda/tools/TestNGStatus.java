@@ -1,16 +1,32 @@
 package hu.sed.soda.tools;
 
+import org.testng.ITestListener;
 import org.testng.ITestResult;
 
 /**
- * This class represents the statuses which are used in TestNG.
+ * An enumeration for storing TestNG test statuses.
  */
-public enum TestNGStatus {
+public enum TestNGStatus implements TestStatus {
 
+  /**
+   * Indicates that the {@link ITestListener#onTestFailure(ITestResult)} was called.
+   */
   FAILURED("failure", "FAIL"),
+  /**
+   * Indicates that the {@link ITestListener#onTestSkipped(ITestResult)} was called.
+   */
   SKIPPED("skipped", "SKIP"),
+  /**
+   * Indicates that the {@link ITestListener#onTestStart(ITestResult)} was called.
+   */
   STARTED("start", "STRT"),
+  /**
+   * Indicates that the {@link ITestListener#onTestSuccess(ITestResult)} was called.
+   */
   SUCCEEDED("success", "PASS"),
+  /**
+   * Indicates that the {@link ITestListener#onTestFailedButWithinSuccessPercentage(ITestResult)} was called.
+   */
   SUCCEEDED_WITHIN_FAILURE_PERCENTAGE("percent", "FPASS");
 
   /**
@@ -34,18 +50,15 @@ public enum TestNGStatus {
     this.event = event;
     this.outcome = outcome;
   }
-
+  
+  @Override
   public String getEvent() {
     return event;
   }
-
+  
+  @Override
   public String getOutcome() {
     return outcome;
-  }
-
-  @Override
-  public String toString() {
-    return this.event;
   }
 
   /**
