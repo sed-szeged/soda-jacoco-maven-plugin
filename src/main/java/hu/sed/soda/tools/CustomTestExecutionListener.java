@@ -2,11 +2,8 @@ package hu.sed.soda.tools;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.Socket;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -15,9 +12,8 @@ import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
-import org.jacoco.core.data.ExecutionDataWriter;
-import org.jacoco.core.runtime.RemoteControlReader;
-import org.jacoco.core.runtime.RemoteControlWriter;
+import org.jacoco.core.tools.ExecDumpClient;
+import org.jacoco.core.tools.ExecFileLoader;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
@@ -161,28 +157,31 @@ public class CustomTestExecutionListener extends RunListener implements ITestLis
    * 
    * @param coverageFile
    *          The file in which the coverage data should be stored.
+   * 
+   * @return True if the coverage data has been dumped, false if the data was only reset.
    */
-  public static void dumpAndResetCoverage(File coverageFile) {
+  public static boolean dumpAndResetCoverage(File coverageFile) {
+    boolean dump = false;
+
     try {
-      final FileOutputStream localFile = new FileOutputStream(coverageFile);
+      if (!coverageFile.exists()) {
+        dump = true;
+      }
 
-      final ExecutionDataWriter localWriter = new ExecutionDataWriter(localFile);
+      ExecDumpClient client = new ExecDumpClient();
+      client.setReset(true);
+      client.setDump(dump);
 
-      final Socket socket = new Socket(InetAddress.getByName(Constants.JACOCO_AGENT_ADDRESS), Constants.JACOCO_AGENT_PORT);
-      final RemoteControlWriter writer = new RemoteControlWriter(socket.getOutputStream());
-      final RemoteControlReader reader = new RemoteControlReader(socket.getInputStream());
-      reader.setSessionInfoVisitor(localWriter);
-      reader.setExecutionDataVisitor(localWriter);
+      ExecFileLoader loader = client.dump(Constants.JACOCO_AGENT_ADDRESS, Constants.JACOCO_AGENT_PORT);
 
-      // Send a dump command and read the response:
-      writer.visitDumpCommand(true, true);
-      reader.read();
-
-      socket.close();
-      localFile.close();
+      if (dump) {
+        loader.save(coverageFile, false);
+      }
     } catch (IOException e) {
       LOGGER.warning("Cannot dump and reset coverage because: " + e.getMessage());
     }
+
+    return dump;
   }
 
   // //////////////////////////////////////////////////////////////////////////
@@ -216,8 +215,6 @@ public class CustomTestExecutionListener extends RunListener implements ITestLis
 
     handleEvent(description, JUnitStatus.IGNORED);
 
-    testResults.add(actualTestInfo);
-
     super.testIgnored(description);
   }
 
@@ -248,11 +245,13 @@ public class CustomTestExecutionListener extends RunListener implements ITestLis
   public void testFinished(Description description) throws Exception {
     handleEvent(description, JUnitStatus.FINISHED);
 
-    testResults.add(actualTestInfo);
-
     File coverageFile = new File(outputDirectory, actualTestInfo.getHash() + '.' + Constants.COVERAGE_FILE_EXT);
 
-    dumpAndResetCoverage(coverageFile);
+    if (dumpAndResetCoverage(coverageFile)) {
+      testResults.add(actualTestInfo);
+    } else {
+      LOGGER.warning(String.format("Coverage data already exists for test '%s' in file '%s'", actualTestInfo.getTestName(), coverageFile.getPath()));
+    }
 
     super.testFinished(description);
   }
@@ -286,12 +285,14 @@ public class CustomTestExecutionListener extends RunListener implements ITestLis
 
     LOGGER.info(String.format("%s %s", testName, status));
 
-    if (status != TestNGStatus.STARTED) {
+    if (status != TestNGStatus.STARTED && status != TestNGStatus.SKIPPED) {
       File coverageFile = new File(outputDirectory, info.getHash() + '.' + Constants.COVERAGE_FILE_EXT);
 
-      dumpAndResetCoverage(coverageFile);
-
-      testResults.add(info);
+      if (dumpAndResetCoverage(coverageFile)) {
+        testResults.add(info);
+      } else {
+        LOGGER.warning(String.format("Coverage data already exists for test '%s' in file '%s'", info.getTestName(), coverageFile.getPath()));
+      }
     }
   }
 
