@@ -114,8 +114,14 @@ public class ReportGeneratorMojo extends AbstractMojo {
    * @throws IOException
    * @throws FileNotFoundException
    */
-  private void generateReports(String[] coverageFilePaths) throws FileNotFoundException, IOException {
+  private void generateReports(String[] coverageFilePaths) throws FileNotFoundException, IOException {    
+    getLog().info("Generating reports...");
+
     createHashToTestMapping();
+    
+    int index = 0;
+    final int numOfPaths = coverageFilePaths.length;
+    final int stepSize = Math.max(1, numOfPaths / 10);
 
     for (String path : coverageFilePaths) {
       String nameHash = path.replaceAll(String.format("\\.%s", Constants.COVERAGE_FILE_EXT), "");
@@ -129,6 +135,10 @@ public class ReportGeneratorMojo extends AbstractMojo {
       final IBundleCoverage bundleCoverage = analyzeStructure(loader, nameHash);
 
       createReport(loader, bundleCoverage, nameHash);
+      
+      if (++index % stepSize == 0) {
+        getLog().info(String.format("%d%% done.", 100 * index / numOfPaths));
+      }
     }
   }
 
@@ -214,7 +224,7 @@ public class ReportGeneratorMojo extends AbstractMojo {
    * @throws FileNotFoundException
    */
   public void createHashToTestMapping() throws IOException, FileNotFoundException {
-    File mapFile = Paths.get(Constants.BASE_DIR, revision, String.format("%s.r%s", Constants.MAP_FILE, revision)).toFile();
+    File mapFile = Paths.get(baseDirectory.getPath(), revision, String.format("%s.r%s", Constants.MAP_FILE, revision)).toFile();
 
     try (BufferedReader input = new BufferedReader(new FileReader(mapFile))) {
       String line = null;

@@ -73,7 +73,7 @@ public class CustomTestExecutionListener extends RunListener implements ITestLis
       }
 
       // Configuring the logger.
-      FileHandler fileHandler = new FileHandler(new File(Constants.BASE_DIR, "CustomJUnitExecutionListener.log").getAbsolutePath());
+      FileHandler fileHandler = new FileHandler(new File(Constants.BASE_DIR, "CustomJUnitExecutionListener.log").getAbsolutePath(), true);
       fileHandler.setFormatter(new SimpleFormatter());
 
       LOGGER.addHandler(fileHandler);
@@ -110,8 +110,8 @@ public class CustomTestExecutionListener extends RunListener implements ITestLis
     File mapFile = new File(resultsDir, String.format("%s.r%s", Constants.MAP_FILE, revision));
 
     try (
-        BufferedWriter resultOutput = new BufferedWriter(new FileWriter(resultsFile));
-        BufferedWriter mapOutput = new BufferedWriter(new FileWriter(mapFile))
+        BufferedWriter resultOutput = new BufferedWriter(new FileWriter(resultsFile, true));
+        BufferedWriter mapOutput = new BufferedWriter(new FileWriter(mapFile, true))
     ) {
       for (TestInfo result : testResults) {
         resultOutput.write(String.format("%s: %s\n", result.getFinalStatus().getOutcome(), result.getTestName()));
