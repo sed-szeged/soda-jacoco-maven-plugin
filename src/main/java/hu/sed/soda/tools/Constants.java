@@ -23,7 +23,7 @@ public interface Constants {
   /**
    * The default directory.
    */
-  static final String BASE_DIR = "target/jacoco";
+  static final String BASE_DIR = "./target/jacoco";
 
   /**
    * The directory for coverage data.
