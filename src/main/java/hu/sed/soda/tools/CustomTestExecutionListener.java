@@ -123,36 +123,6 @@ public class CustomTestExecutionListener extends RunListener implements ITestLis
   }
 
   /**
-   * Creates the name of a test based on its description.
-   * 
-   * @param description
-   *          The {@link Description description} of the test.
-   * @return The name of the test.
-   */
-  public static String getTestName(Description description) {
-    StringBuilder sb = new StringBuilder();
-
-    sb.append(description.getClassName()).append('.').append(description.getMethodName());
-
-    return sb.toString();
-  }
-
-  /**
-   * Creates the name of a test based on a test result.
-   * 
-   * @param description
-   *          The {@link ITestResult test result}.
-   * @return The name of the test.
-   */
-  public static String getTestName(ITestResult result) {
-    StringBuilder sb = new StringBuilder();
-
-    sb.append(result.getInstanceName()).append('.').append(result.getName());
-
-    return sb.toString();
-  }
-
-  /**
    * Saves then resets the actual coverage.
    * 
    * @param coverageFile
@@ -211,7 +181,7 @@ public class CustomTestExecutionListener extends RunListener implements ITestLis
 
   @Override
   public void testIgnored(Description description) throws Exception {
-    actualTestInfo = new TestInfo(getTestName(description));
+    actualTestInfo = new TestInfo(TestInfo.getTestName(description));
 
     handleEvent(description, JUnitStatus.IGNORED);
 
@@ -220,7 +190,7 @@ public class CustomTestExecutionListener extends RunListener implements ITestLis
 
   @Override
   public void testStarted(Description description) throws Exception {
-    actualTestInfo = new TestInfo(getTestName(description));
+    actualTestInfo = new TestInfo(TestInfo.getTestName(description));
 
     handleEvent(description, JUnitStatus.STARTED);
 
@@ -278,7 +248,7 @@ public class CustomTestExecutionListener extends RunListener implements ITestLis
    *          The {@link ITestResult result} of the test.
    */
   private void handleEvent(ITestResult result) {
-    String testName = getTestName(result);
+    String testName = TestInfo.getTestName(result);
     TestNGStatus status = TestNGStatus.createFrom(result);
 
     TestInfo info = new TestInfo(testName, status);

@@ -4,6 +4,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.junit.runner.Description;
+import org.testng.ITestResult;
 
 /**
  * Stores information about a test.
@@ -24,6 +26,36 @@ public class TestInfo {
    * Whether the status of the test is concrete or it should be calculated.
    */
   private boolean isConcrete;
+
+  /**
+   * Creates the name of a test based on its description.
+   *
+   * @param description
+   *          The {@link org.junit.runner.Description description} of the test.
+   * @return The name of the test.
+   */
+  public static String getTestName(Description description) {
+    StringBuilder sb = new StringBuilder();
+
+    sb.append(description.getClassName()).append('.').append(description.getMethodName());
+
+    return sb.toString();
+  }
+
+  /**
+   * Creates the name of a test based on a test result.
+   *
+   * @param result
+   *          The {@link org.testng.ITestResult test result}.
+   * @return The name of the test.
+   */
+  public static String getTestName(ITestResult result) {
+    StringBuilder sb = new StringBuilder();
+
+    sb.append(result.getInstanceName()).append('.').append(result.getName());
+
+    return sb.toString();
+  }
 
   /**
    * Creates a test information object.

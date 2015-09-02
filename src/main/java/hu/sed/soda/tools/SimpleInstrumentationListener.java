@@ -5,8 +5,12 @@ import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
+import org.testng.ITestContext;
+import org.testng.ITestListener;
+import org.testng.ITestResult;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashSet;
@@ -15,7 +19,7 @@ import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
-public class SimpleInstrumentationListener extends RunListener {
+public class SimpleInstrumentationListener extends RunListener implements ITestListener {
 
     private static final Logger LOGGER = Logger.getLogger(CustomTestExecutionListener.class.getName());
 
@@ -68,10 +72,13 @@ public class SimpleInstrumentationListener extends RunListener {
         }
     }
 
+    // //////////////////////////////////////////////////////////////////////////
+    // JUnit ////////////////////////////////////////////////////////////////////
+    // //////////////////////////////////////////////////////////////////////////
 
     @Override
     public void testStarted(Description description) throws Exception {
-        actualTest = getTestName(description);
+        actualTest = TestInfo.getTestName(description);
 
         super.testStarted(description);
     }
@@ -99,6 +106,51 @@ public class SimpleInstrumentationListener extends RunListener {
 
     @Override
     public void testRunFinished(Result result) throws Exception {
+        dumpResults();
+
+        super.testRunFinished(result);
+    }
+
+    // //////////////////////////////////////////////////////////////////////////
+    // TestNG ///////////////////////////////////////////////////////////////////
+    // //////////////////////////////////////////////////////////////////////////
+
+    @Override
+    public void onTestStart(ITestResult iTestResult) {
+
+    }
+
+    @Override
+    public void onTestSuccess(ITestResult iTestResult) {
+
+    }
+
+    @Override
+    public void onTestFailure(ITestResult iTestResult) {
+
+    }
+
+    @Override
+    public void onTestSkipped(ITestResult iTestResult) {
+
+    }
+
+    @Override
+    public void onTestFailedButWithinSuccessPercentage(ITestResult iTestResult) {
+
+    }
+
+    @Override
+    public void onStart(ITestContext iTestContext) {
+
+    }
+
+    @Override
+    public void onFinish(ITestContext iTestContext) {
+
+    }
+
+    private void dumpResults() throws FileNotFoundException {
         // Dump data
 
         PrintWriter out = new PrintWriter(new File(Constants.BASE_DIR, "TestCoverage.csv").getAbsolutePath());
@@ -110,22 +162,5 @@ public class SimpleInstrumentationListener extends RunListener {
         out.close();
 
         LOGGER.info("Simple instrumentation listener has dumped coverage data succesfully (" + coveringTests.size() + " tests were recorded).");
-
-        super.testRunFinished(result);
-    }
-
-    /**
-     * Creates the name of a test based on its description.
-     *
-     * @param description
-     *          The {@link Description description} of the test.
-     * @return The name of the test.
-     */
-    private static String getTestName(Description description) {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(description.getClassName()).append('.').append(description.getMethodName());
-
-        return sb.toString();
     }
 }
