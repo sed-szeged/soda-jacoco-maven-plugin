@@ -117,27 +117,27 @@ public class SimpleInstrumentationListener extends RunListener implements ITestL
 
     @Override
     public void onTestStart(ITestResult iTestResult) {
-
+        actualTest = TestInfo.getTestName(iTestResult);
     }
 
     @Override
     public void onTestSuccess(ITestResult iTestResult) {
-
+        actualTest = null;
     }
 
     @Override
     public void onTestFailure(ITestResult iTestResult) {
-
+        actualTest = null;
     }
 
     @Override
     public void onTestSkipped(ITestResult iTestResult) {
-
+        actualTest = null;
     }
 
     @Override
     public void onTestFailedButWithinSuccessPercentage(ITestResult iTestResult) {
-
+        actualTest = null;
     }
 
     @Override
@@ -147,20 +147,22 @@ public class SimpleInstrumentationListener extends RunListener implements ITestL
 
     @Override
     public void onFinish(ITestContext iTestContext) {
-
+        dumpResults();
     }
 
-    private void dumpResults() throws FileNotFoundException {
+    private void dumpResults() {
         // Dump data
+        try {
+            PrintWriter out = new PrintWriter(new File(Constants.BASE_DIR, "TestCoverage.csv").getAbsolutePath());
+            for (String test : coveringTests) {
+                out.println(test);
+            }
 
-        PrintWriter out = new PrintWriter(new File(Constants.BASE_DIR, "TestCoverage.csv").getAbsolutePath());
+            out.close();
 
-        for (String test : coveringTests) {
-            out.println(test);
+            LOGGER.info("Simple instrumentation listener has dumped coverage data succesfully (" + coveringTests.size() + " tests were recorded).");
+        } catch (FileNotFoundException e) {
+            LOGGER.info("Simple instrumentation listener has failed: Output file not found.");
         }
-
-        out.close();
-
-        LOGGER.info("Simple instrumentation listener has dumped coverage data succesfully (" + coveringTests.size() + " tests were recorded).");
     }
 }
