@@ -5,13 +5,12 @@ import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
-import org.testng.ITestListener;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -33,16 +32,16 @@ public class SimpleInstrumentationListener extends RunListener {
     /**
      * List of tests that executed the instrumented code.
      */
-    private static List<String> coveringTests;
+    private static Set<String> coveringTests;
 
     /**
      * Initializes the output directory and the log output stream.
      */
     static {
         try {
-            coveringTests = new ArrayList<>();
+            coveringTests = new HashSet<>();
 
-            outputDirectory = Constants.COVERAGE_DIR.toFile();
+            outputDirectory = new File(Constants.BASE_DIR);
 
             if (!outputDirectory.exists()) {
                 outputDirectory.mkdirs();
