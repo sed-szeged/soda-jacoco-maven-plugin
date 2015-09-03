@@ -9,8 +9,10 @@ import org.testng.ITestContext;
 import org.testng.ITestListener;
 import org.testng.ITestResult;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashSet;
@@ -21,7 +23,7 @@ import java.util.logging.SimpleFormatter;
 
 public class SimpleInstrumentationListener extends RunListener implements ITestListener {
 
-    private static final Logger LOGGER = Logger.getLogger(CustomTestExecutionListener.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(SimpleInstrumentationListener.class.getName());
 
     /**
      * Directory for coverage data.
@@ -165,7 +167,7 @@ public class SimpleInstrumentationListener extends RunListener implements ITestL
     private void dumpResults() {
         // Dump data
         try {
-            PrintWriter out = new PrintWriter(new File(Constants.BASE_DIR, "TestCoverage.csv").getAbsolutePath());
+            PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(new File(Constants.BASE_DIR, "TestCoverage.csv").getAbsolutePath(), true)));
             for (String test : coveringTests) {
                 out.println(test);
             }
@@ -175,6 +177,8 @@ public class SimpleInstrumentationListener extends RunListener implements ITestL
             LOGGER.info("Simple instrumentation listener has dumped coverage data succesfully (" + coveringTests.size() + " tests were recorded).");
         } catch (FileNotFoundException e) {
             LOGGER.info("Simple instrumentation listener has failed: Output file not found.");
+        } catch (IOException e) {
+            LOGGER.info("Simple instrumentation listener has failed: " + e.getMessage());
         }
     }
 }
