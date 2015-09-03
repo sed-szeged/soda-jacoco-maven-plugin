@@ -72,6 +72,18 @@ public class SimpleInstrumentationListener extends RunListener implements ITestL
         }
     }
 
+    /**
+     * Manual instrumenter. Adds the actual test to coverage with mutation identifier.
+     *
+     * @param mutationId
+     *          Mutation identifier
+     */
+    public static void recordCoverage(String mutationId) {
+        if (actualTest != null) {
+            coveringTests.add(actualTest + ":" + mutationId);
+        }
+    }
+
     // //////////////////////////////////////////////////////////////////////////
     // JUnit ////////////////////////////////////////////////////////////////////
     // //////////////////////////////////////////////////////////////////////////
