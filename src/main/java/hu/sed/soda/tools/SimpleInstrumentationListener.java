@@ -68,10 +68,12 @@ public class SimpleInstrumentationListener extends RunListener implements ITestL
     /**
      * Manual instrumenter. Adds the actual test to coverage.
      */
-    public static void recordCoverage() {
+    public static boolean recordCoverage() {
         if (actualTest != null) {
             coveringTests.add(actualTest);
         }
+        
+        return true;
     }
 
     /**
@@ -80,10 +82,12 @@ public class SimpleInstrumentationListener extends RunListener implements ITestL
      * @param mutationId
      *          Mutation identifier
      */
-    public static void recordCoverage(String mutationId) {
+    public static boolean recordCoverage(String mutationId) {
         if (actualTest != null) {
             coveringTests.add(actualTest + ":" + mutationId);
         }
+        
+        return true;
     }
 
     // //////////////////////////////////////////////////////////////////////////
