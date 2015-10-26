@@ -154,6 +154,21 @@ public class CustomTestExecutionListener extends RunListener implements ITestLis
     return dump;
   }
 
+  /**
+   * Resets the actual coverage.
+   */
+  public static void resetCoverage() {
+    try {
+      ExecDumpClient client = new ExecDumpClient();
+      client.setReset(true);
+      client.setDump(false);
+
+      client.dump(Constants.JACOCO_AGENT_ADDRESS, Constants.JACOCO_AGENT_PORT);
+    } catch (IOException e) {
+      LOGGER.warning("Cannot reset coverage because: " + e.getMessage());
+    }
+  }
+
   // //////////////////////////////////////////////////////////////////////////
   // JUnit ////////////////////////////////////////////////////////////////////
   // //////////////////////////////////////////////////////////////////////////
@@ -193,6 +208,8 @@ public class CustomTestExecutionListener extends RunListener implements ITestLis
     actualTestInfo = new TestInfo(TestInfo.getTestName(description));
 
     handleEvent(description, JUnitStatus.STARTED);
+
+    resetCoverage();
 
     super.testStarted(description);
   }
@@ -269,6 +286,8 @@ public class CustomTestExecutionListener extends RunListener implements ITestLis
   @Override
   public void onTestStart(ITestResult result) {
     handleEvent(result);
+
+    resetCoverage();
   }
 
   @Override
